@@ -13,23 +13,22 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 @api_view(["POST"])
 def ai_gm_chat(request):
-    """
-    处理 AI GM 聊天的 API 端点
-    """
-    user_input = request.data.get("message", "")
+
+    user_input = request.data.get("message", "")  # 处理用户输入
 
     if not user_input:
+        # 如果 user_input 为空，返回 HTTP 400（Bad Request），避免 API 误调用
         return Response({"error": "Message cannot be empty"}, status=400)
 
     try:
         # 发送消息到 OpenAI
         response = client.chat.completions.create(
-            model="gpt-4o",  # 最新模型
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a Game Master in a tabletop RPG."},
                 {"role": "user", "content": user_input},
             ],
-            temperature=1,
+            temperature=1,  # 控制ai创造力
             max_tokens=300,  # 限制回复长度
             top_p=1,
             frequency_penalty=0,
