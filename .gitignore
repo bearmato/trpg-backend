@@ -1,0 +1,15 @@
+# 忽略 Python 相关文件
+__pycache__/
+*.pyc
+*.pyo
+#django默认数据库
+*.sqlite3
+
+# 忽略环境变量文件
+.env
+
+# 忽略 Pipenv 相关文件（可选）
+#Pipfile.lock
+
+# 忽略 VSCode 相关文件
+.vscode/
