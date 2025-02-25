@@ -5,9 +5,10 @@ name = "pypi"
 
 [packages]
 django = "*"
-djangorestframework = "*"
-django-cors-headers = "*"
 python-dotenv = "*"
+openai = "*"
+django-cors-headers = "*"
+djangorestframework = "*"
 
 [dev-packages]
 
