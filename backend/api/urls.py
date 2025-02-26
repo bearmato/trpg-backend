@@ -1,6 +1,7 @@
-from django.urls import path
-from .views import ai_gm_chat
+from django.urls import path, include
+
 
 urlpatterns = [
-    path("chat/", ai_gm_chat, name="ai_gm_chat"),
+    path("aigm/", include("aigm.urls")),  # AIGM 相关 API
+    path("rules/", include("rules.urls")),  # 规则查询 API
 ]

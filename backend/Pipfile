@@ -9,6 +9,7 @@ python-dotenv = "*"
 openai = "*"
 django-cors-headers = "*"
 djangorestframework = "*"
+requests = "*"
 
 [dev-packages]
 
