@@ -16,12 +16,12 @@ PDF_METADATA = {
     },
     'DungeonMastersGuide.pdf': {
         'title': '地下城主指南',
-        'description': '地下城主打造传奇故事所需的一切指南，世界最伟大的角色扮演游戏。',
+        'description': '地下城主打造传奇故事所需的一切规则指南。',
         'category': 'core'
     },
     'MonsterManual.pdf': {
         'title': '怪物图鉴',
-        'description': '世界最伟大的角色扮演游戏中致命怪物的详尽图鉴。',
+        'description': '游戏中怪物的详尽图鉴',
         'category': 'core'
     }
 }
@@ -94,8 +94,14 @@ def view_pdf(request, filename):
     if not file_path.exists():
         return JsonResponse({'error': 'PDF文件未找到'}, status=404)
 
-    # 提供文件
+    # 提供文件 - 使用 inline 让浏览器尝试内嵌查看
     response = FileResponse(open(file_path, 'rb'),
                             content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="{filename}"'
+
+    # 添加跨域头
+    response["Access-Control-Allow-Origin"] = "*"
+    response["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    response["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+
     return response
