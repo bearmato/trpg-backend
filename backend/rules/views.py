@@ -1,104 +1,101 @@
-from django.http import JsonResponse
-import requests
-import json
-from django.core.cache import cache
+from django.http import FileResponse, JsonResponse
+from django.conf import settings
+import os
+from rest_framework.decorators import api_view
+from pathlib import Path
 
-DND_API_BASE_URL = "https://www.dnd5eapi.co/api"
-CACHE_TIMEOUT = 60 * 60 * 24  # 24小时缓存
+# PDF 文件目录路径 - 您需要在此位置存储PDF文件
+PDF_DIR = Path(settings.BASE_DIR) / 'pdfs'
 
-
-def get_rules(request, category):
-    """从 D&D 5e API 获取规则数据"""
-    # 尝试从缓存获取
-    cache_key = f"dnd_rules_{category}"
-    cached_data = cache.get(cache_key)
-    if cached_data:
-        return JsonResponse(cached_data)
-
-    try:
-        response = requests.get(f"{DND_API_BASE_URL}/{category}")
-        if response.status_code == 200:
-            data = response.json()
-            # 存入缓存
-            cache.set(cache_key, data, CACHE_TIMEOUT)
-            return JsonResponse(data)
-
-        return JsonResponse({"error": "Failed to fetch data", "status_code": response.status_code}, status=500)
-
-    except requests.RequestException as e:
-        return JsonResponse({"error": f"API request failed: {str(e)}"}, status=500)
+# 预定义的PDF元数据
+PDF_METADATA = {
+    'DnD5ePlayersHandbook.pdf': {
+        'title': 'D&D 5e 玩家手册',
+        'description': '每位龙与地下城角色扮演者必备的基础参考。包含角色创建、探索和冒险的规则。',
+        'category': 'core'
+    },
+    'DungeonMastersGuide.pdf': {
+        'title': '地下城主指南',
+        'description': '地下城主打造传奇故事所需的一切指南，世界最伟大的角色扮演游戏。',
+        'category': 'core'
+    },
+    'MonsterManual.pdf': {
+        'title': '怪物图鉴',
+        'description': '世界最伟大的角色扮演游戏中致命怪物的详尽图鉴。',
+        'category': 'core'
+    }
+}
 
 
-def get_rule_detail(request, category, rule_name):
-    """获取单个规则详情"""
-    # 尝试从缓存获取
-    cache_key = f"dnd_rule_detail_{category}_{rule_name}"
-    cached_data = cache.get(cache_key)
-    if cached_data:
-        return JsonResponse(cached_data)
+@api_view(['GET'])
+def get_rulebooks(request):
+    """返回所有可用的规则书分类及PDF文件"""
+    # 确保目录存在
+    if not PDF_DIR.exists():
+        os.makedirs(PDF_DIR, exist_ok=True)
 
-    try:
-        response = requests.get(f"{DND_API_BASE_URL}/{category}/{rule_name}")
-        if response.status_code == 200:
-            data = response.json()
+    # 扫描目录并构建分类列表
+    rulebooks = {}
+    for file in PDF_DIR.glob('*.pdf'):
+        filename = file.name
 
-            # 对特定类型的数据进行额外处理
-            processed_data = process_rule_data(data, category)
+        # 获取元数据或使用默认值
+        metadata = PDF_METADATA.get(filename, {
+            'title': filename,
+            'description': '规则书PDF文件',
+            'category': 'other'
+        })
 
-            # 存入缓存
-            cache.set(cache_key, processed_data, CACHE_TIMEOUT)
-            return JsonResponse(processed_data)
+        # 添加文件信息
+        file_info = {
+            'filename': filename,
+            'title': metadata['title'],
+            'description': metadata['description'],
+            'size': file.stat().st_size,
+            'url': f'/api/rules/pdf/{filename}'
+        }
 
-        return JsonResponse({"error": "Rule not found", "status_code": response.status_code}, status=404)
+        # 按分类组织
+        category = metadata.get('category', 'other')
+        if category not in rulebooks:
+            rulebooks[category] = []
 
-    except requests.RequestException as e:
-        return JsonResponse({"error": f"API request failed: {str(e)}"}, status=500)
+        rulebooks[category].append(file_info)
+
+    # 分类名称映射
+    category_names = {
+        'core': '核心规则书',
+        'adventure': '冒险模组',
+        'supplement': '补充规则',
+        'other': '其他规则资源'
+    }
+
+    # 构建最终响应
+    result = []
+    for category, books in rulebooks.items():
+        result.append({
+            'id': category,
+            'name': category_names.get(category, category),
+            'books': books
+        })
+
+    return JsonResponse({
+        'status': 'success',
+        'data': result
+    })
 
 
-def process_rule_data(data, category):
-    """
-    处理不同类型的规则数据，确保返回更有意义的信息
-    """
-    # 如果数据已经有描述，直接返回
-    if data.get('desc'):
-        return data
+@api_view(['GET'])
+def view_pdf(request, filename):
+    """提供PDF文件服务"""
+    file_path = PDF_DIR / filename
 
-    # 对于没有描述的数据，尝试构建描述
-    processed_data = data.copy()
+    # 检查文件是否存在
+    if not file_path.exists():
+        return JsonResponse({'error': 'PDF文件未找到'}, status=404)
 
-    # 根据不同类型的数据，生成描述信息
-    if category == 'equipment':
-        # 为装备添加描述信息
-        details = []
-
-        # 添加成本信息
-        if data.get('cost'):
-            details.append(
-                f"Cost: {data['cost'].get('quantity', 0)} {data['cost'].get('unit', '')}")
-
-        # 添加装备类型
-        if data.get('equipment_category'):
-            details.append(
-                f"Category: {data['equipment_category'].get('name', 'Unknown')}")
-
-        # 添加重量信息
-        if data.get('weight'):
-            details.append(f"Weight: {data['weight']} lbs")
-
-        # 如果有额外的描述性属性
-        for key in ['special', 'properties']:
-            if data.get(key):
-                details.append(
-                    f"{key.capitalize()}: {', '.join(prop.get('name', '') for prop in data[key])}")
-
-        # 如果有详细信息，则合并
-        if details:
-            processed_data['desc'] = "\n".join(details)
-        else:
-            processed_data['desc'] = "No specific details available for this item."
-
-    # 为其他类型添加类似的处理逻辑
-    # elif category == 'spells':
-    #     # 处理法术的特殊逻辑
-
-    return processed_data
+    # 提供文件
+    response = FileResponse(open(file_path, 'rb'),
+                            content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="{filename}"'
+    return response
