@@ -1,3 +1,4 @@
+# backend/rules/views.py
 from django.http import FileResponse, JsonResponse
 from django.conf import settings
 import os
@@ -10,18 +11,18 @@ PDF_DIR = Path(settings.BASE_DIR) / 'pdfs'
 # 预定义的PDF元数据
 PDF_METADATA = {
     'DnD5ePlayersHandbook.pdf': {
-        'title': 'D&D 5e 玩家手册',
+        'title': 'D&D 5e PlayersHandbook',
         'description': '每位龙与地下城角色扮演者必备的基础参考。包含角色创建、探索和冒险的规则。',
         'category': 'core'
     },
     'DungeonMastersGuide.pdf': {
-        'title': '地下城主指南',
-        'description': '地下城主打造传奇故事所需的一切规则指南。',
+        'title': 'DungeonMasters Guide',
+        'description': '地下城主打造精彩故事所需的一切规则指南。',
         'category': 'core'
     },
     'MonsterManual.pdf': {
-        'title': '怪物图鉴',
-        'description': '游戏中怪物的详尽图鉴',
+        'title': 'Monster Manual',
+        'description': '游戏中怪物的详尽图鉴。',
         'category': 'core'
     }
 }
@@ -87,17 +88,39 @@ def get_rulebooks(request):
 
 @api_view(['GET'])
 def view_pdf(request, filename):
-    """提供PDF文件服务"""
+    """提供PDF文件预览服务"""
     file_path = PDF_DIR / filename
 
     # 检查文件是否存在
     if not file_path.exists():
         return JsonResponse({'error': 'PDF文件未找到'}, status=404)
 
-    # 提供文件 - 使用 inline 让浏览器尝试内嵌查看
+    # 提供文件用于内嵌预览
     response = FileResponse(open(file_path, 'rb'),
                             content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="{filename}"'
+
+    # 添加跨域头
+    response["Access-Control-Allow-Origin"] = "*"
+    response["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    response["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+
+    return response
+
+
+@api_view(['GET'])
+def download_pdf(request, filename):
+    """提供PDF文件下载服务"""
+    file_path = PDF_DIR / filename
+
+    # 检查文件是否存在
+    if not file_path.exists():
+        return JsonResponse({'error': 'PDF文件未找到'}, status=404)
+
+    # 提供文件 - 使用 attachment 强制下载
+    response = FileResponse(open(file_path, 'rb'),
+                            content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
     # 添加跨域头
     response["Access-Control-Allow-Origin"] = "*"
