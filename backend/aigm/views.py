@@ -134,3 +134,57 @@ def generate_character_background(request):
 
     except Exception as e:
         return Response({"error": f"Error generating character background: {str(e)}"}, status=500)
+
+# Adventure-start endpoint removed
+
+
+@api_view(["POST"])
+def generate_character_portrait(request):
+    """生成角色立绘图像"""
+    # 获取角色信息
+    character_name = request.data.get("name", "")
+    character_race = request.data.get("race", "")
+    character_class = request.data.get("class", "")
+    character_gender = request.data.get("gender", "")
+    character_style = request.data.get("style", "fantasy")  # 艺术风格
+    features = request.data.get("features", [])  # 特征描述
+
+    if not character_race or not character_class:
+        return Response({"error": "Character race and class are required"}, status=400)
+
+    try:
+        # 构建图像生成提示词
+        portrait_prompt = f"""Create a detailed portrait of a {character_race} {character_class}, {character_gender}.
+        
+        Character details:
+        - Name: {character_name if character_name else 'Unnamed character'}
+        - Race: {character_race}
+        - Class: {character_class}
+        - Style: {character_style} art style
+        - Features: {', '.join(features)}
+        
+        The portrait should show the character from shoulders up with appropriate clothing, equipment, and background elements that reflect their class and race.
+        """
+
+        # 调用OpenAI的DALL-E 3图像生成API
+        response = client.images.generate(
+            model="dall-e-3",
+            prompt=portrait_prompt,
+            size="1024x1024",
+            quality="standard",
+            n=1,
+        )
+
+        # 获取图像URL
+        image_url = response.data[0].url
+
+        # 返回图像URL和相关信息
+        return Response({
+            "image_url": image_url,
+            "name": character_name,
+            "race": character_race,
+            "class": character_class
+        }, status=200)
+
+    except Exception as e:
+        return Response({"error": f"Error generating character portrait: {str(e)}"}, status=500)
