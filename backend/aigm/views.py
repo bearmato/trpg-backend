@@ -79,64 +79,6 @@ def ai_gm_chat(request):
 
 
 @api_view(["POST"])
-def ai_gm_adventure_start(request):
-    """Generate new adventure opening"""
-
-    # Get adventure parameters set by user
-    adventure_type = request.data.get(
-        "adventureType", "fantasy")  # Default fantasy
-    # Default medium difficulty
-    difficulty = request.data.get("difficulty", "medium")
-    party_level = request.data.get(
-        "partyLevel", 1)                # Default level 1
-    # Optional specific setting
-    setting = request.data.get("setting", "")
-
-    try:
-        # Build prompt
-        adventure_prompt = f"""As an experienced TRPG Game Master, create an engaging adventure opening for players with the following parameters:
-        - Adventure type: {adventure_type}
-        - Difficulty level: {difficulty}
-        - Party level: Level {party_level}
-        - Special setting: {setting}
-        
-        Please provide:
-        1. A vivid scene introduction
-        2. Current situation and initial challenge
-        3. One or two NPCs or choices for immediate interaction
-        
-        Use rich descriptive language to create an immersive atmosphere, but keep it concise for players to quickly enter the game.
-        """
-
-        # Send message to OpenAI
-        response = client.chat.completions.create(
-            model="gpt-4o",  # Use latest model
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": adventure_prompt}
-            ],
-            temperature=0.8,  # Increased creativity
-            max_tokens=1000,  # Longer opening
-            top_p=1,
-            frequency_penalty=0.2,
-            presence_penalty=0.3
-        )
-
-        # Get AI response
-        adventure_intro = response.choices[0].message.content
-
-        return Response({
-            "introduction": adventure_intro,
-            "adventureType": adventure_type,
-            "difficulty": difficulty,
-            "partyLevel": party_level
-        }, status=200)
-
-    except Exception as e:
-        return Response({"error": f"Error generating adventure opening: {str(e)}"}, status=500)
-
-
-@api_view(["POST"])
 def generate_character_background(request):
     """Generate character background story based on keywords"""
 
