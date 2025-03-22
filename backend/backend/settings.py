@@ -150,8 +150,9 @@ CSRF_TRUSTED_ORIGINS = [
 
 ]
 
-# 允许所有跨域请求（开发环境用）
-CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOW_ALL_ORIGINS = ["https://trpg208.vercel.app",
+                          "http://localhost:5173",]
 
 # 读取 OpenAI API Key
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
