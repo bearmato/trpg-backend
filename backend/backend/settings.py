@@ -40,10 +40,12 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     'rest_framework',
+    'rest_framework.authtoken',
     'corsheaders',
     'api',
     'rules',
     'aigm',
+    'accounts',
 
 ]
 
@@ -77,6 +79,10 @@ TEMPLATES = [
 ]
 
 REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+
     'DEFAULT_PARSER_CLASSES': [
         'rest_framework.parsers.JSONParser',
     ]
@@ -149,10 +155,8 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:5173",
 
 ]
-
-
-CORS_ALLOW_ALL_ORIGINS = ["https://trpg208.vercel.app",
-                          "http://localhost:5173",]
+# 或临时允许所有来源（仅开发环境）
+CORS_ALLOW_ALL_ORIGINS = True
 
 # 读取 OpenAI API Key
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -166,3 +170,33 @@ CORS_ALLOW_METHODS = [
     "DELETE",
     "OPTIONS"
 ]
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'accounts': {  # 自定义应用日志
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
