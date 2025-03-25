@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'rules',
     'aigm',
     'accounts',
+    'characters',
 
 ]
 
@@ -162,18 +163,27 @@ CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL_ORIGINS", "False") == "True"
 CSRF_TRUSTED_ORIGINS = os.getenv(
     "CSRF_TRUSTED_ORIGINS", "https://trpg208.vercel.app,http://localhost:5173,http://127.0.0.1:5173").split(",")
 
-
+CORS_ALLOW_CREDENTIALS = True
 # 读取 OpenAI API Key
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 
 CORS_ALLOW_METHODS = [
-    "GET",
-    "POST",
-    "PUT",
-    "PATCH",
-    "DELETE",
-    "OPTIONS"
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'origin',
+    'user-agent',
 ]
 
 # 配置 Whitenoise 静态文件处理
