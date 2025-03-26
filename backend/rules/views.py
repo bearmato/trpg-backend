@@ -12,17 +12,17 @@ PDF_DIR = Path(settings.BASE_DIR) / 'pdfs'
 PDF_METADATA = {
     'DnD5ePlayersHandbook.pdf': {
         'title': 'D&D 5e PlayersHandbook',
-        'description': '每位龙与地下城角色扮演者必备的基础参考。包含角色创建、探索和冒险的规则。',
+        'description': 'Essential reference for every Dungeons & Dragons roleplayer. Includes rules for character creation, exploration, and adventure.',
         'category': 'core'
     },
     'DungeonMastersGuide.pdf': {
         'title': 'DungeonMasters Guide',
-        'description': '地下城主打造精彩故事所需的一切规则指南。',
+        'description': ' All the rules and guidance a Dungeon Master needs to craft engaging stories.',
         'category': 'core'
     },
     'MonsterManual.pdf': {
         'title': 'Monster Manual',
-        'description': '游戏中怪物的详尽图鉴。',
+        'description': 'Comprehensive compendium of monsters in the game.',
         'category': 'core'
     }
 }
