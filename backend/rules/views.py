@@ -117,7 +117,7 @@ def download_pdf(request, filename):
     if not file_path.exists():
         return JsonResponse({'error': 'PDF文件未找到'}, status=404)
 
-    # 提供文件 - 使用 attachment 强制下载
+    # 提供文件 - 使用 attachment 下载
     response = FileResponse(open(file_path, 'rb'),
                             content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'

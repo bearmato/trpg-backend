@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (
     RegisterView, LoginView, LogoutView,
-    UserDetailView, ProfileView
+    UserDetailView, ProfileView, AvatarUploadView
 )
 
 urlpatterns = [
@@ -10,4 +10,5 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='logout'),
     path('user/', UserDetailView.as_view(), name='user-detail'),
     path('profile/', ProfileView.as_view(), name='profile'),
+    path('upload-avatar/', AvatarUploadView.as_view(), name='upload-avatar'),
 ]

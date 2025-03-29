@@ -6,6 +6,11 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from .serializers import UserSerializer, RegisterSerializer, ProfileSerializer, ProfileUpdateSerializer
 from .models import Profile
+import cloudinary
+import cloudinary.uploader
+import uuid
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import IsAuthenticated
 
 
 import logging
@@ -92,3 +97,64 @@ class ProfileView(APIView):
             serializer.save()
             return Response(ProfileSerializer(profile).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AvatarUploadView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        """Handle avatar upload to Cloudinary"""
+        try:
+            # Get the uploaded file
+            avatar_file = request.FILES.get('avatar')
+            if not avatar_file:
+                return Response(
+                    {'error': 'No image file provided'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Validate file size (3MB max)
+            if avatar_file.size > 3 * 1024 * 1024:
+                return Response(
+                    {'error': 'Image size should not exceed 3MB'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Generate a unique filename
+            filename = f"avatar_{uuid.uuid4().hex}"
+
+            # Upload to Cloudinary
+            upload_result = cloudinary.uploader.upload(
+                avatar_file,
+                public_id=filename,
+                folder="user_avatars",
+                resource_type="image",
+                transformation=[
+                    {'quality': 'auto'},
+                    {'fetch_format': 'auto'},
+                    {'width': 400, 'height': 400, 'crop': 'limit'}
+                ]
+            )
+
+            # Get the secure URL from Cloudinary
+            avatar_url = upload_result.get('secure_url')
+
+            # Update user's profile
+            profile, created = Profile.objects.get_or_create(user=request.user)
+            profile.avatar = avatar_url
+            profile.save()
+
+            # Return the updated profile
+            serializer = ProfileSerializer(profile)
+            return Response({
+                'message': 'Avatar uploaded successfully',
+                'avatar_url': avatar_url,
+                'profile': serializer.data
+            })
+
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to upload avatar: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
