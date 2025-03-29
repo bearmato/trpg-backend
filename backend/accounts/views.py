@@ -106,9 +106,12 @@ class AvatarUploadView(APIView):
     def post(self, request):
         """Handle avatar upload to Cloudinary"""
         try:
+            logger.info(f"开始处理用户 {request.user.username} 的头像上传请求")
+
             # Get the uploaded file
             avatar_file = request.FILES.get('avatar')
             if not avatar_file:
+                logger.warning("未提供图片文件")
                 return Response(
                     {'error': 'No image file provided'},
                     status=status.HTTP_400_BAD_REQUEST
@@ -116,34 +119,70 @@ class AvatarUploadView(APIView):
 
             # Validate file size (3MB max)
             if avatar_file.size > 3 * 1024 * 1024:
+                logger.warning(
+                    f"图片大小超过限制: {avatar_file.size / (1024 * 1024):.2f}MB")
                 return Response(
                     {'error': 'Image size should not exceed 3MB'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
+            # Log file details for debugging
+            logger.info(
+                f"文件信息: 名称={avatar_file.name}, 大小={avatar_file.size/1024:.2f}KB, 类型={avatar_file.content_type}")
+
             # Generate a unique filename
             filename = f"avatar_{uuid.uuid4().hex}"
+            logger.info(f"生成的唯一文件名: {filename}")
+
+            # Check Cloudinary config
+            config = cloudinary.config()
+            if not all([config.cloud_name, config.api_key, config.api_secret]):
+                logger.error("Cloudinary配置错误，缺少必要参数")
+                return Response(
+                    {'error': 'Server configuration error with Cloudinary'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
 
             # Upload to Cloudinary
-            upload_result = cloudinary.uploader.upload(
-                avatar_file,
-                public_id=filename,
-                folder="user_avatars",
-                resource_type="image",
-                transformation=[
-                    {'quality': 'auto'},
-                    {'fetch_format': 'auto'},
-                    {'width': 400, 'height': 400, 'crop': 'limit'}
-                ]
-            )
+            try:
+                logger.info("开始上传到Cloudinary...")
+                upload_result = cloudinary.uploader.upload(
+                    avatar_file,
+                    public_id=filename,
+                    folder="user_avatars",
+                    resource_type="image",
+                    transformation=[
+                        {'quality': 'auto'},
+                        {'fetch_format': 'auto'},
+                        {'width': 400, 'height': 400, 'crop': 'limit'}
+                    ]
+                )
+                logger.info(
+                    f"Cloudinary上传成功: public_id={upload_result.get('public_id')}")
+            except Exception as upload_err:
+                logger.error(
+                    f"Cloudinary上传失败: {str(upload_err)}", exc_info=True)
+                return Response(
+                    {'error': f'Upload to cloud storage failed: {str(upload_err)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
 
             # Get the secure URL from Cloudinary
             avatar_url = upload_result.get('secure_url')
+            if not avatar_url:
+                logger.error("Cloudinary返回结果中缺少secure_url")
+                return Response(
+                    {'error': 'Failed to get URL from cloud storage'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            logger.info(f"获取到Cloudinary URL: {avatar_url}")
 
             # Update user's profile
             profile, created = Profile.objects.get_or_create(user=request.user)
             profile.avatar = avatar_url
             profile.save()
+            logger.info(f"用户 {request.user.username} 的头像更新成功")
 
             # Return the updated profile
             serializer = ProfileSerializer(profile)
@@ -154,6 +193,7 @@ class AvatarUploadView(APIView):
             })
 
         except Exception as e:
+            logger.error(f"头像上传过程发生异常: {str(e)}", exc_info=True)
             return Response(
                 {'error': f'Failed to upload avatar: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
