@@ -1,10 +1,10 @@
-
 import os
 import json
 from openai import OpenAI
 from dotenv import load_dotenv
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from .utils import upload_dalle_image, delete_cloudinary_image
 
 # Load .env configuration
 load_dotenv()
@@ -289,7 +289,7 @@ def get_alignment_details(alignment):
 
 @api_view(["POST"])
 def generate_character_portrait(request):
-    """生成具有准确种族和职业特征的角色立绘图像"""
+    """生成具有准确种族和职业特征的角色立绘图像，并保存到Cloudinary"""
     # 获取角色信息
     character_name = request.data.get("name", "")
     character_race = request.data.get("race", "")
@@ -340,21 +340,53 @@ def generate_character_portrait(request):
             prompt=portrait_prompt,
             size="1024x1024",
             quality="hd",  # 使用高质量设置
+            response_format="url",  # 明确指定返回URL
             n=1,
         )
 
-        # 获取图像URL
+        # 获取生成的图像URL
         image_url = response.data[0].url
 
-        # 返回图像URL和相关信息
+        # 下载图像以便上传到Cloudinary
+        import requests
+        image_response = requests.get(image_url)
+        if image_response.status_code != 200:
+            return Response({
+                "error": f"无法下载DALL-E生成的图像，状态码: {image_response.status_code}"
+            }, status=500)
+
+        # 将图像内容转换为base64
+        import base64
+        image_base64 = base64.b64encode(image_response.content).decode('utf-8')
+
+        # 使用Cloudinary保存图像
+        folder_name = "character_portraits"
+        upload_result = upload_dalle_image(image_base64, folder=folder_name)
+
+        if not upload_result['success']:
+            return Response({
+                "error": f"图像上传到Cloudinary失败: {upload_result['error']}"
+            }, status=500)
+
+        # 返回Cloudinary图像URL和相关信息
         return Response({
-            "image_url": image_url,
+            "image_url": upload_result['url'],
+            "public_id": upload_result['public_id'],
             "name": character_name,
             "race": character_race,
-            "class": character_class
+            "class": character_class,
+            "image_details": {
+                "width": upload_result.get('width'),
+                "height": upload_result.get('height'),
+                "format": upload_result.get('format'),
+                "size": upload_result.get('bytes')
+            }
         }, status=200)
 
     except Exception as e:
+        import traceback
+        print(f"生成角色立绘时出错: {str(e)}")
+        print(traceback.format_exc())
         return Response({"error": f"生成角色立绘时出错: {str(e)}"}, status=500)
 
 
@@ -645,3 +677,24 @@ def get_class_appearance_details(character_class):
     }
 
     return class_appearance.get(character_class, "A character with distinctive features representing their profession and training.")
+
+
+@api_view(["DELETE"])
+def delete_image(request, public_id):
+    """
+    从Cloudinary删除指定的图片
+    """
+    try:
+        result = delete_cloudinary_image(public_id)
+
+        if result['success']:
+            return Response({
+                "message": f"图片 {public_id} 已成功删除"
+            }, status=200)
+        else:
+            return Response({
+                "error": f"删除图片失败: {result.get('error')}"
+            }, status=400)
+
+    except Exception as e:
+        return Response({"error": f"删除图片时出错: {str(e)}"}, status=500)

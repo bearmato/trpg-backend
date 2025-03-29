@@ -9,6 +9,9 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
+import cloudinary.api
+import cloudinary.uploader
+import cloudinary
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -49,7 +52,8 @@ INSTALLED_APPS = [
     'aigm',
     'accounts',
     'characters',
-
+    'cloudinary',
+    'cloudinary_storage',
 ]
 
 MIDDLEWARE = [
@@ -219,3 +223,12 @@ LOGGING = {
         },
     },
 }
+
+# Cloudinary 配置
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
+    'API_SECRET': os.getenv('CLOUDINARY_API_SECRET')
+}
+# 可选：默认文件存储配置
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
